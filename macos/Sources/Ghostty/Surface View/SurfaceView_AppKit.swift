@@ -174,6 +174,16 @@ extension Ghostty {
             }
         }
 
+        /// True while keyboard copy mode is active (`toggle_copy_mode`).
+        @Published private(set) var copyModeActive: Bool = false
+
+        func toggleCopyMode() {
+            copyModeActive.toggle()
+            if !copyModeActive, let surface {
+                _ = ghostty_surface_clear_selection(surface)
+            }
+        }
+
         /// Returns the data model for this surface.
         ///
         /// Note: eventually, all surface access will be through this, but presently its in a transition

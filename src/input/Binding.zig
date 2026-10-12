@@ -802,6 +802,15 @@ pub const Action = union(enum) {
     /// option.
     toggle_mouse_reporting,
 
+    /// Toggle keyboard copy mode in the focused terminal.
+    ///
+    /// In copy mode, vim motions move a cursor over the screen and the
+    /// scrollback, `v` and `V` start a selection, and `y` copies it. Keys
+    /// go to copy mode instead of the running program.
+    ///
+    /// Only implemented on macOS.
+    toggle_copy_mode,
+
     /// Toggle the command palette.
     ///
     /// The command palette is a popup that lets you see what actions
@@ -1427,6 +1436,7 @@ pub const Action = union(enum) {
             .toggle_window_float_on_top,
             .toggle_secure_input,
             .toggle_mouse_reporting,
+            .toggle_copy_mode,
             .toggle_command_palette,
             .toggle_background_opacity,
             .show_on_screen_keyboard,

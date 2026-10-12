@@ -57,4 +57,5 @@ test {
     _ = runtime;
     _ = action;
     _ = structs;
+    _ = @import("apprt/keyboard_selection.zig");
 }

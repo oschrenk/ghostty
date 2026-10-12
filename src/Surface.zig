@@ -21,6 +21,7 @@ const assert = @import("quirks.zig").inlineAssert;
 const Allocator = std.mem.Allocator;
 const ArenaAllocator = std.heap.ArenaAllocator;
 const global = @import("global.zig");
+const keyboard_selection = @import("apprt/keyboard_selection.zig");
 const oni = @import("oniguruma");
 const simd = @import("simd/main.zig");
 const crash = @import("crash/main.zig");
@@ -2161,6 +2162,55 @@ pub fn hasSelection(self: *const Surface) bool {
     self.renderer_state.mutex.lockUncancelable(global.io());
     defer self.renderer_state.mutex.unlock(global.io());
     return self.io.terminal.screens.active.selection != null;
+}
+
+/// Copy mode: put a one-cell selection (the copy cursor) at a visible cell.
+/// False outside the viewport.
+pub fn selectViewportCell(self: *Surface, column: u16, row: u16) !bool {
+    self.renderer_state.mutex.lockUncancelable(global.io());
+    defer self.renderer_state.mutex.unlock(global.io());
+
+    const screen = self.io.terminal.screens.active;
+    const sel = keyboard_selection.cellSelection(screen, column, row) orelse return false;
+    try self.setSelection(sel);
+    try self.queueRender();
+    return true;
+}
+
+/// Copy mode: the active selection's moving end in viewport cells. False
+/// without a selection.
+pub fn selectionEndpoint(self: *Surface, result: *keyboard_selection.Endpoint) bool {
+    self.renderer_state.mutex.lockUncancelable(global.io());
+    defer self.renderer_state.mutex.unlock(global.io());
+
+    const screen = self.io.terminal.screens.active;
+    const sel = screen.selection orelse return false;
+    result.* = keyboard_selection.endpoint(screen, sel);
+    return true;
+}
+
+/// Copy mode: widen the active selection to whole rows. False without a
+/// selection.
+pub fn selectLines(self: *Surface) !bool {
+    self.renderer_state.mutex.lockUncancelable(global.io());
+    defer self.renderer_state.mutex.unlock(global.io());
+
+    const screen = self.io.terminal.screens.active;
+    const sel = screen.selection orelse return false;
+    try self.setSelection(keyboard_selection.linewise(screen, sel));
+    try self.queueRender();
+    return true;
+}
+
+/// Clear the active selection. False when there was none.
+pub fn clearSelection(self: *Surface) !bool {
+    self.renderer_state.mutex.lockUncancelable(global.io());
+    defer self.renderer_state.mutex.unlock(global.io());
+
+    if (self.io.terminal.screens.active.selection == null) return false;
+    try self.setSelection(null);
+    try self.queueRender();
+    return true;
 }
 
 /// Returns the selected text. This is allocated.

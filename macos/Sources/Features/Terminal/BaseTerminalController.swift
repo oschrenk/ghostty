@@ -106,6 +106,19 @@ class BaseTerminalController: NSWindowController,
         didSet { applyTitleToWindow() }
     }
 
+    /// An override title for the whole window set via set_window_title. When set,
+    /// the titlebar shows it while each tab keeps its own label. Every tab in a
+    /// tab group carries the same value.
+    var windowTitleOverride: String? {
+        didSet { applyTitleToWindow() }
+    }
+
+    /// The title of this tab alone, ignoring `windowTitleOverride`.
+    var tabTitle: String {
+        guard let titleOverride else { return lastComputedTitle }
+        return computeTitle(title: titleOverride, bell: focusedSurface?.bell ?? false)
+    }
+
     /// The last computed title from the focused surface (without the override).
     private var lastComputedTitle: String = "👻"
 
@@ -433,7 +446,7 @@ class BaseTerminalController: NSWindowController,
         alert.alertStyle = .informational
 
         let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 250, height: 24))
-        textField.stringValue = titleOverride ?? window.title
+        textField.stringValue = titleOverride ?? tabTitle
         alert.accessoryView = textField
 
         alert.addButton(withTitle: "OK")
@@ -916,14 +929,10 @@ class BaseTerminalController: NSWindowController,
     private func applyTitleToWindow() {
         guard let window else { return }
 
-        if let titleOverride {
-            window.title = computeTitle(
-                title: titleOverride,
-                bell: focusedSurface?.bell ?? false)
-            return
-        }
+        window.title = windowTitleOverride ?? tabTitle
 
-        window.title = lastComputedTitle
+        // nil makes the tab label follow the window title again.
+        window.tab.title = windowTitleOverride == nil ? nil : tabTitle
     }
 
     func pwdDidChange(to: URL?) {
@@ -1738,4 +1747,15 @@ extension Notification.Name {
     /// Terminal window aggregate bell state changed.
     static let terminalWindowBellDidChangeNotification = Notification.Name("com.mitchellh.ghostty.terminalWindowBellDidChange")
     static let terminalWindowHasBellKey = terminalWindowBellDidChangeNotification.rawValue + ".hasBell"
+}
+
+extension NSWindow {
+    /// Sets `windowTitleOverride` on every tab in this window's tab group.
+    /// nil restores the default, where the window shows the selected tab's title.
+    func setWindowTitleOverride(_ title: String?) {
+        for window in tabbedWindows ?? [self] {
+            (window.windowController as? BaseTerminalController)?.windowTitleOverride = title
+        }
+        NSApp.postTabsChanged()
+    }
 }

@@ -46,10 +46,17 @@ final class ScriptWindow: NSObject {
     /// Exposed as the AppleScript `title` property.
     ///
     /// Returns the title of the window (from the selected/primary controller's NSWindow).
+    /// Setting it applies a window title override to every tab; empty clears it.
     @objc(title)
     var title: String {
-        guard NSApp.isAppleScriptEnabled else { return "" }
-        return selectedController?.window?.title ?? ""
+        get {
+            guard NSApp.isAppleScriptEnabled else { return "" }
+            return selectedController?.window?.title ?? ""
+        }
+        set {
+            guard NSApp.isAppleScriptEnabled else { return }
+            selectedController?.window?.setWindowTitleOverride(newValue.isEmpty ? nil : newValue)
+        }
     }
 
     /// Exposed as the AppleScript `tabs` element.

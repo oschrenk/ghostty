@@ -16,6 +16,7 @@ extension NSApplication {
                 let tabs = window.tabs
                 return [
                     "id": window.stableID,
+                    "title": window.title,
                     "focused": tabs.contains { $0.parentWindow?.isKeyWindow == true },
                     "tabs": tabs.map { tab in
                         [

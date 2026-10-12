@@ -659,6 +659,9 @@ extension Ghostty {
             case GHOSTTY_ACTION_SET_TAB_TITLE:
                 return setTabTitle(app, target: target, v: action.action.set_tab_title)
 
+            case GHOSTTY_ACTION_SET_WINDOW_TITLE:
+                return setWindowTitle(app, target: target, v: action.action.set_window_title)
+
             case GHOSTTY_ACTION_PROMPT_TITLE:
                 return promptTitle(app, target: target, v: action.action.prompt_title)
 
@@ -1855,6 +1858,32 @@ extension Ghostty {
                       let controller = window.windowController as? BaseTerminalController
                 else { return false }
                 controller.titleOverride = titleOverride
+                return true
+
+            default:
+                assertionFailure()
+                return false
+            }
+        }
+
+        private static func setWindowTitle(
+            _ app: ghostty_app_t,
+            target: ghostty_target_s,
+            v: ghostty_action_set_title_s
+        ) -> Bool {
+            switch target.tag {
+            case GHOSTTY_TARGET_APP:
+                Ghostty.logger.warning("set window title does nothing with an app target")
+                return false
+
+            case GHOSTTY_TARGET_SURFACE:
+                guard let title = String(cString: v.title!, encoding: .utf8) else { return false }
+                guard let surface = target.target.surface else { return false }
+                guard let surfaceView = self.surfaceView(from: surface) else { return false }
+                guard let window = surfaceView.window,
+                      window.windowController is BaseTerminalController
+                else { return false }
+                window.setWindowTitleOverride(title.isEmpty ? nil : title)
                 return true
 
             default:

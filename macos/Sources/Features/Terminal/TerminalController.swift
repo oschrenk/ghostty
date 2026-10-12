@@ -1233,6 +1233,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
         super.windowWillClose(notification)
         cancelPendingInitialPresentation()
         self.relabelTabs()
+        NSApp.postTabsChanged()
 
         // If we remove a window, we reset the cascade point to the key window so that
         // the next window cascade's from that one.
@@ -1268,6 +1269,7 @@ class TerminalController: BaseTerminalController, TabGroupCloseCoordinator.Contr
         super.windowDidBecomeKey(notification)
         self.relabelTabs()
         self.fixTabBar()
+        NSApp.postTabsChanged()
     }
 
     override func windowDidMove(_ notification: Notification) {

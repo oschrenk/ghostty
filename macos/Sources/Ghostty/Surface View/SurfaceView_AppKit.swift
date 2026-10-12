@@ -185,14 +185,19 @@ extension Ghostty {
         /// The first `g` of `gg`.
         private var copyModePendingG = false
 
+        /// Mouse reporting before copy mode turned it off, restored on exit.
+        private var copyModeSavedMouseReporting = true
+
         func toggleCopyMode() {
             guard let surface else { return }
             copyModeActive.toggle()
             copyModeVisual = .none
             copyModePendingG = false
             if copyModeActive {
+                copyModeSavedMouseReporting = ghostty_surface_set_mouse_reporting(surface, false)
                 _ = ghostty_surface_select_cursor_cell(surface)
             } else {
+                _ = ghostty_surface_set_mouse_reporting(surface, copyModeSavedMouseReporting)
                 _ = ghostty_surface_clear_selection(surface)
             }
         }

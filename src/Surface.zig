@@ -3886,6 +3886,15 @@ fn isMouseReporting(self: *const Surface) bool {
         self.io.terminal.flags.mouse_event != .none;
 }
 
+/// Set whether mouse events go to the running program, like the
+/// `mouse-reporting` config, and return the previous value. Copy mode turns
+/// reporting off while it is active.
+pub fn setMouseReporting(self: *Surface, enabled: bool) bool {
+    const prev = self.config.mouse_reporting;
+    self.config.mouse_reporting = enabled;
+    return prev;
+}
+
 pub fn mouseReportingActive(self: *Surface) bool {
     self.renderer_state.mutex.lockUncancelable(global.io());
     defer self.renderer_state.mutex.unlock(global.io());

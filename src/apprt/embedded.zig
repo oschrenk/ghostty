@@ -1954,6 +1954,12 @@ pub const CAPI = struct {
         };
     }
 
+    /// Set whether mouse events go to the running program. Returns the
+    /// previous value.
+    export fn ghostty_surface_set_mouse_reporting(surface: *Surface, enabled: bool) bool {
+        return surface.core_surface.setMouseReporting(enabled);
+    }
+
     /// Clear the active selection. False when there was none.
     export fn ghostty_surface_clear_selection(surface: *Surface) bool {
         return surface.core_surface.clearSelection() catch |err| {

@@ -218,7 +218,7 @@ extension Ghostty {
             case "l": copyModeAdjust("right")
             case "0": copyModeAdjust("beginning_of_line")
             case "$": copyModeAdjust("end_of_line")
-            case "G": copyModeAdjust("end")
+            case "G": copyModeAdjust("end", "beginning_of_line")
             case "g":
                 if pendingG { copyModeAdjust("home") } else { copyModePendingG = true }
             case "w": copyModeWord(GHOSTTY_WORD_MOTION_NEXT_START)
@@ -233,8 +233,10 @@ extension Ghostty {
             }
         }
 
-        private func copyModeAdjust(_ direction: String) {
-            _ = surfaceModel?.perform(action: "adjust_selection:\(direction)")
+        private func copyModeAdjust(_ directions: String...) {
+            for direction in directions {
+                _ = surfaceModel?.perform(action: "adjust_selection:\(direction)")
+            }
             copyModeAfterMove()
         }
 

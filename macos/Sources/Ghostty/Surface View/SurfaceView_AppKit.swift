@@ -184,6 +184,19 @@ extension Ghostty {
             }
         }
 
+        /// Copy mode takes every key without command, so the running program
+        /// never sees it. Command keys keep their bindings, such as the toggle.
+        private func copyModeHandles(_ event: NSEvent) -> Bool {
+            copyModeActive && !event.modifierFlags.contains(.command)
+        }
+
+        private func copyModeKeyDown(_ event: NSEvent) {
+            switch event.keyCode {
+            case 0x35: toggleCopyMode() // escape
+            default: break
+            }
+        }
+
         /// Returns the data model for this surface.
         ///
         /// Note: eventually, all surface access will be through this, but presently its in a transition
@@ -1136,6 +1149,11 @@ extension Ghostty {
             // On any keyDown event we unset our bell state
             bell = false
 
+            if copyModeHandles(event) {
+                copyModeKeyDown(event)
+                return
+            }
+
             // We need to translate the mods (maybe) to handle configs such as option-as-alt
             let translationModsGhostty = Ghostty.eventModifierFlags(
                 mods: ghostty_surface_key_translation_mods(
@@ -1299,6 +1317,7 @@ extension Ghostty {
         }
 
         override func keyUp(with event: NSEvent) {
+            if copyModeHandles(event) { return }
             _ = keyAction(GHOSTTY_ACTION_RELEASE, event: event)
         }
 

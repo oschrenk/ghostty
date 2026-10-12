@@ -176,6 +176,9 @@
       <parameter name="with configuration" code="GNwS" type="surface configuration" optional="yes" description="Base surface configuration for the initial terminal.">
         <cocoa key="configuration"/>
       </parameter>
+      <parameter name="with title" code="GNwT" type="text" optional="yes" description="Window title override, shown in place of the tab titles.">
+        <cocoa key="title"/>
+      </parameter>
       <result type="window" description="The newly created window."/>
     </command>
 

@@ -165,7 +165,8 @@ extension NSApplication {
     /// Required selector name from the command in `sdef`:
     /// `handleNewWindowScriptCommand:`.
     ///
-    /// Accepts an optional reusable surface configuration object.
+    /// Accepts an optional reusable surface configuration object and an
+    /// optional window title override.
     ///
     /// Returns the newly created scripting window object.
     @objc(handleNewWindowScriptCommand:)
@@ -195,6 +196,10 @@ extension NSApplication {
             appDelegate.ghostty,
             withBaseConfig: baseConfig
         )
+        // Set before the deferred tabs-changed post runs, so its first payload carries the title.
+        if let title = command.evaluatedArguments?["title"] as? String, !title.isEmpty {
+            controller.windowTitleOverride = title
+        }
         let createdWindowID = ScriptWindow.stableID(primaryController: controller)
 
         if let scriptWindow = scriptWindows.first(where: { $0.stableID == createdWindowID }) {

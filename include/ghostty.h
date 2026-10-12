@@ -1257,6 +1257,19 @@ typedef struct {
 GHOSTTY_API bool ghostty_surface_select_viewport_cell(ghostty_surface_t,
                                                       uint16_t column,
                                                       uint16_t row);
+// Select the cell under the terminal cursor, where copy mode starts.
+GHOSTTY_API bool ghostty_surface_select_cursor_cell(ghostty_surface_t);
+// Vim word motions. Words follow soft wraps and split on
+// selection-word-chars, like double-click selection.
+typedef enum {
+  GHOSTTY_WORD_MOTION_NEXT_START,  // w
+  GHOSTTY_WORD_MOTION_PREV_START,  // b
+  GHOSTTY_WORD_MOTION_NEXT_END,    // e
+} ghostty_word_motion_e;
+// Move the active selection's end by a word motion and scroll it into view.
+// Returns false without a selection or a word in that direction.
+GHOSTTY_API bool ghostty_surface_selection_word(ghostty_surface_t,
+                                                ghostty_word_motion_e);
 // The active selection's moving end. Returns false without a selection.
 GHOSTTY_API bool ghostty_surface_selection_end(
     ghostty_surface_t,

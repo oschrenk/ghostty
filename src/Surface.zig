@@ -2177,6 +2177,38 @@ pub fn selectViewportCell(self: *Surface, column: u16, row: u16) !bool {
     return true;
 }
 
+/// Copy mode: put a one-cell selection (the copy cursor) at the terminal
+/// cursor. False if the cursor cell cannot hold one.
+pub fn selectCursorCell(self: *Surface) !bool {
+    self.renderer_state.mutex.lockUncancelable(global.io());
+    defer self.renderer_state.mutex.unlock(global.io());
+
+    const screen = self.io.terminal.screens.active;
+    const sel = keyboard_selection.cursorSelection(screen) orelse return false;
+    try self.setSelection(sel);
+    try self.queueRender();
+    return true;
+}
+
+/// Copy mode: move the active selection's end by a vim word motion and
+/// scroll it into view. False without a selection or a word to move to.
+pub fn moveSelectionWord(self: *Surface, motion: keyboard_selection.WordMotion) !bool {
+    self.renderer_state.mutex.lockUncancelable(global.io());
+    defer self.renderer_state.mutex.unlock(global.io());
+
+    const screen = self.io.terminal.screens.active;
+    const sel = screen.selection orelse return false;
+    const moved = keyboard_selection.wordMotion(
+        sel,
+        motion,
+        self.config.selection_word_chars,
+    ) orelse return false;
+    try self.setSelection(moved);
+    scrollSelectionEndIntoView(screen);
+    try self.queueRender();
+    return true;
+}
+
 /// Copy mode: the active selection's moving end in viewport cells. False
 /// without a selection.
 pub fn selectionEndpoint(self: *Surface, result: *keyboard_selection.Endpoint) bool {
@@ -5845,25 +5877,7 @@ pub fn performBindingAction(self: *Surface, action: input.Binding.Action) !bool 
                 .end_of_line => .end_of_line,
             });
 
-            // If the selection endpoint is outside of the current viewpoint,
-            // scroll it in to view. Note we always specifically use sel.end
-            // because that is what adjust modifies.
-            scroll: {
-                const viewport_tl = screen.pages.getTopLeft(.viewport);
-                const viewport_br = screen.pages.getBottomRight(.viewport).?;
-                if (sel.end().isBetween(viewport_tl, viewport_br))
-                    break :scroll;
-
-                // Our end point is not within the viewport. If the end
-                // point is after the br then we need to adjust the end so
-                // that it is at the bottom right of the viewport.
-                const target = if (sel.end().before(viewport_tl))
-                    sel.end()
-                else
-                    sel.end().up(screen.pages.rows - 1) orelse sel.end();
-
-                screen.scroll(.{ .pin = target });
-            }
+            scrollSelectionEndIntoView(screen);
 
             // Queue a render so its shown
             screen.dirty.selection = true;
@@ -5872,6 +5886,27 @@ pub fn performBindingAction(self: *Surface, action: input.Binding.Action) !bool 
     }
 
     return true;
+}
+
+/// If the selection's moving end is outside the viewport, scroll it into
+/// view. Adjusting a selection always moves its end.
+///
+/// This must be called with the renderer mutex held.
+fn scrollSelectionEndIntoView(screen: *terminal.Screen) void {
+    const sel = screen.selection orelse return;
+    const viewport_tl = screen.pages.getTopLeft(.viewport);
+    const viewport_br = screen.pages.getBottomRight(.viewport).?;
+    if (sel.end().isBetween(viewport_tl, viewport_br)) return;
+
+    // Our end point is not within the viewport. If the end
+    // point is after the br then we need to adjust the end so
+    // that it is at the bottom right of the viewport.
+    const target = if (sel.end().before(viewport_tl))
+        sel.end()
+    else
+        sel.end().up(screen.pages.rows - 1) orelse sel.end();
+
+    screen.scroll(.{ .pin = target });
 }
 
 /// Returns true if performing the given action result in closing

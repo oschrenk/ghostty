@@ -177,9 +177,22 @@ extension Ghostty {
         /// True while keyboard copy mode is active (`toggle_copy_mode`).
         @Published private(set) var copyModeActive: Bool = false
 
+        /// The selection kind in copy mode. With none, a one-cell selection
+        /// is the cursor.
+        private enum CopyModeVisual { case none, char, line }
+        private var copyModeVisual: CopyModeVisual = .none
+
+        /// The first `g` of `gg`.
+        private var copyModePendingG = false
+
         func toggleCopyMode() {
+            guard let surface else { return }
             copyModeActive.toggle()
-            if !copyModeActive, let surface {
+            copyModeVisual = .none
+            copyModePendingG = false
+            if copyModeActive {
+                _ = ghostty_surface_select_cursor_cell(surface)
+            } else {
                 _ = ghostty_surface_clear_selection(surface)
             }
         }
@@ -191,10 +204,68 @@ extension Ghostty {
         }
 
         private func copyModeKeyDown(_ event: NSEvent) {
-            switch event.keyCode {
-            case 0x35: toggleCopyMode() // escape
+            if event.keyCode == 0x35 { // escape
+                toggleCopyMode()
+                return
+            }
+
+            let pendingG = copyModePendingG
+            copyModePendingG = false
+            switch event.characters {
+            case "h": copyModeAdjust("left")
+            case "j": copyModeAdjust("down")
+            case "k": copyModeAdjust("up")
+            case "l": copyModeAdjust("right")
+            case "0": copyModeAdjust("beginning_of_line")
+            case "$": copyModeAdjust("end_of_line")
+            case "G": copyModeAdjust("end")
+            case "g":
+                if pendingG { copyModeAdjust("home") } else { copyModePendingG = true }
+            case "w": copyModeWord(GHOSTTY_WORD_MOTION_NEXT_START)
+            case "b": copyModeWord(GHOSTTY_WORD_MOTION_PREV_START)
+            case "e": copyModeWord(GHOSTTY_WORD_MOTION_NEXT_END)
+            case "v": copyModeSetVisual(.char)
+            case "V": copyModeSetVisual(.line)
+            case "y":
+                _ = surfaceModel?.perform(action: "copy_to_clipboard")
+                toggleCopyMode()
             default: break
             }
+        }
+
+        private func copyModeAdjust(_ direction: String) {
+            _ = surfaceModel?.perform(action: "adjust_selection:\(direction)")
+            copyModeAfterMove()
+        }
+
+        private func copyModeWord(_ motion: ghostty_word_motion_e) {
+            guard let surface else { return }
+            _ = ghostty_surface_selection_word(surface, motion)
+            copyModeAfterMove()
+        }
+
+        /// A motion moves the selection's end. Without a visual selection,
+        /// shrink it back to one cell at the end, so it acts as a cursor.
+        private func copyModeAfterMove() {
+            guard let surface else { return }
+            switch copyModeVisual {
+            case .none: copyModeCollapse()
+            case .char: break
+            case .line: _ = ghostty_surface_select_lines(surface)
+            }
+        }
+
+        /// `v` and `V` start that selection kind, or end it if it is active.
+        private func copyModeSetVisual(_ visual: CopyModeVisual) {
+            copyModeVisual = copyModeVisual == visual ? .none : visual
+            copyModeAfterMove()
+        }
+
+        private func copyModeCollapse() {
+            guard let surface else { return }
+            var end = ghostty_surface_selection_end_s()
+            guard ghostty_surface_selection_end(surface, &end), end.in_viewport else { return }
+            _ = ghostty_surface_select_viewport_cell(surface, end.column, UInt16(end.row))
         }
 
         /// Returns the data model for this surface.

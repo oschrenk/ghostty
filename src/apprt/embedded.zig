@@ -1918,6 +1918,26 @@ pub const CAPI = struct {
         };
     }
 
+    /// Copy mode: a one-cell selection (the copy cursor) at the terminal
+    /// cursor.
+    export fn ghostty_surface_select_cursor_cell(surface: *Surface) bool {
+        return surface.core_surface.selectCursorCell() catch |err| {
+            log.warn("error selecting cursor cell err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Copy mode: move the selection's end by a vim word motion.
+    export fn ghostty_surface_selection_word(
+        surface: *Surface,
+        motion: keyboard_selection.WordMotion,
+    ) bool {
+        return surface.core_surface.moveSelectionWord(motion) catch |err| {
+            log.warn("error moving selection by word err={}", .{err});
+            return false;
+        };
+    }
+
     /// Copy mode: the selection's moving end in viewport cells.
     export fn ghostty_surface_selection_end(
         surface: *Surface,
